@@ -23,7 +23,7 @@ export default async function VisitsPage({ searchParams }: PageProps<"/visits">)
     supabase
       .from("visits")
       .select(
-        "id, client_id, worker_id, starts_at, ends_at, status, notes, client:clients(full_name, address), worker:organization_members!visits_worker_fk(full_name)",
+        "id, client_id, worker_id, starts_at, ends_at, status, notes, client:clients(full_name, address), visit_workers(worker_id, created_at, member:organization_members!visit_workers_worker_fk(full_name))",
       )
       .eq("organization_id", active.organizationId)
       .gte("starts_at", toZonedTimestamp(`${weekStart}T00:00`, tz))
@@ -49,7 +49,17 @@ export default async function VisitsPage({ searchParams }: PageProps<"/visits">)
 
   const clients = clientsRes.data.map((c) => ({ id: c.id, name: c.full_name }));
   const workers = workersRes.data.map((w) => ({ id: w.user_id, name: w.full_name }));
-  const visits = visitsRes.data;
+  // Primary worker (visits.worker_id) first, then the second worker if there is one.
+  const visits = visitsRes.data.map((v) => {
+    const assigned = [...v.visit_workers].sort((a, b) =>
+      a.worker_id === v.worker_id ? -1 : b.worker_id === v.worker_id ? 1 : a.created_at.localeCompare(b.created_at),
+    );
+    return {
+      ...v,
+      workerNames: assigned.map((a) => a.member?.full_name ?? "").join(" + "),
+      secondWorkerId: assigned.find((a) => a.worker_id !== v.worker_id)?.worker_id ?? "",
+    };
+  });
 
   return (
     <div className="grid gap-6">
@@ -85,7 +95,7 @@ export default async function VisitsPage({ searchParams }: PageProps<"/visits">)
               <TableRow>
                 <TableHead>When</TableHead>
                 <TableHead>Client</TableHead>
-                <TableHead>Worker</TableHead>
+                <TableHead>Workers</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Notes</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -99,7 +109,7 @@ export default async function VisitsPage({ searchParams }: PageProps<"/visits">)
                     {formatTime(v.ends_at, tz)}
                   </TableCell>
                   <TableCell>{v.client?.full_name}</TableCell>
-                  <TableCell>{v.worker?.full_name}</TableCell>
+                  <TableCell>{v.workerNames}</TableCell>
                   <TableCell>
                     <StatusBadge status={v.status} />
                   </TableCell>
@@ -115,6 +125,7 @@ export default async function VisitsPage({ searchParams }: PageProps<"/visits">)
                           defaultValues={{
                             clientId: v.client_id,
                             workerId: v.worker_id,
+                            secondWorkerId: v.secondWorkerId,
                             startsAt: toLocalInputValue(v.starts_at, tz),
                             endsAt: toLocalInputValue(v.ends_at, tz),
                             notes: v.notes ?? "",

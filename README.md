@@ -56,7 +56,10 @@ npm run db:test-concurrency # two sessions book the same slot at once; exactly o
 | `30_check_in_check_out.test.sql` | check-in from 500 m is rejected; time window; only the assigned worker checks in; only the worker who checked in checks out; status becomes in_progress, then completed |
 | `40_audit_log.test.sql` | insert/update/delete on clients and visits are audited with who and old/new values; owners read but can't update, delete or truncate it, and neither can the database owner |
 | `50_worker_weekly_hours.test.sql` | completed hours per worker per week in the organization's time zone; workers see only their own |
+| `60_member_and_tenant_guards.test.sql` | only owners manage members; a worker with open visits can't be demoted; every org keeps an owner; rows never change organization |
+| `70_multi_worker_visits.test.sql` | **Part B:** 1–2 workers (never 0 or 3); double booking per worker across all assignments; separate check-ins and check-outs (first → in_progress, last → completed); either worker sees the visit; hours for both workers; legacy `visits.worker_id` insert, update and primary hand-over |
 | `scripts/test-concurrent-booking.sh` | no double booking under concurrent bookings (run in CI) |
+| `scripts/test-part-b-backfill.sh` | **Part B proof on real data:** v1.0.1 schema + 32 seeded visits, then the Part B migrations. Counts, statuses and every (visit, worker) pair are unchanged (run in CI) |
 
 The brief's required tests map to: cross-org read → `20`; worker can't see another's visits → `20`; double booking → `10` and the concurrency script; 500 m check-in → `30`; invalid status change → `10`; audit log can't be changed → `40`.
 

@@ -11,7 +11,9 @@ erDiagram
   organizations ||--o{ clients : "cares for"
   organizations ||--o{ visits : "books"
   clients ||--o{ visits : "receives"
-  organization_members ||--o{ visits : "assigned worker"
+  organization_members ||--o{ visits : "primary worker (legacy worker_id)"
+  visits ||--|{ visit_workers : "1 or 2 workers"
+  organization_members ||--o{ visit_workers : "assigned"
   visits ||--o{ visit_events : "check-in / check-out"
   organization_members ||--o{ visit_events : "recorded by"
   organizations ||--o{ audit_log : "history (no FK)"
@@ -45,6 +47,14 @@ erDiagram
     timestamptz ends_at
     visit_status status
     text notes
+  }
+  visit_workers {
+    uuid visit_id PK,FK
+    uuid worker_id PK,FK
+    uuid organization_id
+    timestamptz starts_at "copy of the visit"
+    timestamptz ends_at "copy of the visit"
+    visit_status visit_status "copy of the visit"
   }
   visit_events {
     uuid id PK
@@ -114,6 +124,23 @@ The client and member lookups take `FOR SHARE` row locks. If a coordinator archi
 
 Indexes: `(organization_id, starts_at)` for the coordinator's week view, `(worker_id, starts_at)` for a worker's visits, and `(organization_id, client_id)` for the client FK. The exclusion constraint adds its own GiST index.
 
+### `visit_workers` (v1.1.0)
+The workers on a visit: 1 or 2, for 2:1 support. It's the source of truth for who is on a visit. `visits.worker_id` mirrors the primary worker for older clients (see [ADR 0002](adr/0002-multi-worker-visits-and-worker-id.md)).
+
+| Constraint / trigger | Rule |
+| --- | --- |
+| PK `(visit_id, worker_id)` | a worker is on a visit at most once |
+| `visit_workers_visit_fk` / `visit_workers_worker_fk` (composite) | same organization as the visit; deleting a visit removes its assignments |
+| `visit_workers_no_overlap` EXCLUDE USING gist `(worker_id =, tstzrange(starts_at, ends_at, '[)') &&) WHERE visit_status <> 'cancelled'` | no double booking per worker, across all their assignments |
+| `visit_workers_before_insert` | at most 2 workers (`CV050`, with the visit row locked), worker role (`CV002`), visit scheduled (`CV005`); copies the time and status from the visit |
+| `visits_require_worker` / `visit_workers_require_worker` (deferred constraint triggers) | at least 1 worker at commit (`CV051`) |
+| `visit_workers_before_change` | keys immutable (`CV052`); changes only while scheduled (`CV005`) |
+| `visits_sync_workers` on `visits` | legacy insert or update of `worker_id` keeps the assignments right; time and status changes are copied to every assignment |
+| `visit_workers_after_delete` | removing the primary worker makes the remaining worker `visits.worker_id` |
+| `visit_workers_audit` | adding or removing a worker is audited (`row_id` = visit) |
+
+Each assigned worker checks in and out separately. The first check-in sets the visit to `in_progress`, and the last assigned worker's check-out sets it to `completed`. `book_visit` / `update_visit` write a visit and its workers in one transaction (`security invoker`, so RLS applies).
+
 ### `visit_events`
 Check-in and check-out records, written only by `check_in` / `check_out`.
 - Composite FKs keep the visit and the worker in the event's organization.
@@ -155,6 +182,13 @@ The web app maps these to user-facing messages and never shows the raw error.
 | `CV041` | `guard_member_change` | Organization must keep at least one owner |
 | `CV042` | `guard_member_change` | Membership keys can't change in place |
 | `CV043` | `prevent_organization_change` | Clients and visits can't move to another organization |
+| `CV016` | `check_in` | You've already checked in to this visit |
+| `CV022` | `check_out` | You've already checked out of this visit |
+| `CV050` | `visit_workers` / `book_visit` | A visit has at most two workers (and at least one when booking) |
+| `CV051` | deferred check | A visit needs at least one worker |
+| `CV052` | `visit_workers` | Assignment keys can't change in place |
+| `CV053` | `book_visit` / `update_visit` | Two different workers needed |
+| `CV054` | `update_visit` | Visit not found or not editable |
 | `42501` | RLS / privileges | Not allowed for this user |
 
 ## Who can do what (RLS)
@@ -168,7 +202,8 @@ Every table has row-level security enabled, and every policy targets `authentica
 | `organizations` | R | R | R | only organizations they're a member of |
 | `organization_members` | R I U D | R | R | colleagues in their own organizations; **only owners manage members** |
 | `clients` | R I U D | R I U D | R (own visits' clients) | workers see only clients on their own visits |
-| `visits` | R I U D | R I U D | R (own) | workers change visits **only** via `check_in` / `check_out` |
+| `visits` | R I U D | R I U D | R (any visit they're assigned to) | workers change visits **only** via `check_in` / `check_out` |
+| `visit_workers` | R I D | R I D | R (their visits' assignments) | no UPDATE; the copies are synced by trigger |
 | `visit_events` | R | R | R (own) | inserted only by `check_in` / `check_out` (no INSERT/UPDATE/DELETE privilege) |
 | `audit_log` | R | – | – | written only by triggers; **nobody** can update or delete it |
 | `worker_weekly_hours` (view) | R (org) | R (org) | R (own hours) | `security_invoker`: inherits the `visit_events` policies |
