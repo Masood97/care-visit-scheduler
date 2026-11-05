@@ -63,6 +63,11 @@ jobs:
       - name: Concurrent double-booking test
         run: bash scripts/test-concurrent-booking.sh
 
+      # Part B proof on real data: v1.0.1 schema + seed, then the Part B migrations on top.
+      # Runs last because it rebuilds the database.
+      - name: Part B backfill on existing rows
+        run: bash scripts/test-part-b-backfill.sh
+
       # Check 7: committed types match the schema.
       - name: Check generated types are up to date
         run: |

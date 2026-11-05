@@ -99,6 +99,32 @@ isOneToOne: false
       referencedColumns: ["organization_id","user_id"]
     }
                   ]
+                },"visit_workers": {
+                  Row: {
+                    "created_at": string,"ends_at": string,"organization_id": string,"starts_at": string,"visit_id": string,"visit_status": Database["public"]['Enums']["visit_status"],"worker_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"ends_at": string,"organization_id": string,"starts_at": string,"visit_id": string,"visit_status": Database["public"]['Enums']["visit_status"],"worker_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"ends_at"?: string,"organization_id"?: string,"starts_at"?: string,"visit_id"?: string,"visit_status"?: Database["public"]['Enums']["visit_status"],"worker_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "visit_workers_visit_fk"
+      columns: ["organization_id","visit_id"]
+isOneToOne: false
+      referencedRelation: "visits"
+      referencedColumns: ["organization_id","id"]
+    },{
+      foreignKeyName: "visit_workers_worker_fk"
+      columns: ["organization_id","worker_id"]
+isOneToOne: false
+      referencedRelation: "organization_members"
+      referencedColumns: ["organization_id","user_id"]
+    }
+                  ]
                 },"visits": {
                   Row: {
                     "client_id": string,"created_at": string,"ends_at": string,"id": string,"notes": string | null,"organization_id": string,"starts_at": string,"status": Database["public"]['Enums']["visit_status"],"updated_at": string,"worker_id": string
@@ -151,7 +177,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "check_in":
+            "book_visit":
+{ Args: { "p_client_id": string,"p_ends_at": string,"p_notes"?: string,"p_organization_id": string,"p_starts_at": string,"p_worker_ids": (string)[] }; Returns: string
+                           },
+"check_in":
 { Args: { "p_lat": number,"p_lng": number,"p_visit_id": string }; Returns: {
               "distance_m": number,
 "event_type": Database["public"]['Enums']["visit_event_type"],
@@ -186,7 +215,10 @@ isOneToOne: false
         to: "visit_events"
         isOneToOne: true
         isSetofReturn: false
-      } }
+      } },
+"update_visit":
+{ Args: { "p_client_id": string,"p_ends_at": string,"p_notes"?: string,"p_starts_at": string,"p_visit_id": string,"p_worker_ids": (string)[] }; Returns: undefined
+                           }
           }
           Enums: {
             "audit_action": "insert"|"update"|"delete","client_status": "active"|"archived","member_role": "owner"|"coordinator"|"worker","visit_event_type": "check_in"|"check_out","visit_status": "scheduled"|"in_progress"|"completed"|"cancelled"

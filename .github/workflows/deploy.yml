@@ -36,10 +36,13 @@ jobs:
       - name: Link staging project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
       - name: Pending migrations (dry run)
-        run: supabase db push --dry-run
+        run: supabase db push --linked --dry-run
       # db push applies migrations only; seed.sql is never pushed to a hosted project.
       - name: Apply migrations
-        run: supabase db push
+        run: supabase db push --linked
+      # Local vs remote migration history, the source for docs/deployments.md.
+      - name: Migration history
+        run: supabase migration list --linked
 
   production:
     name: Migrate production and deploy web app
@@ -64,9 +67,11 @@ jobs:
       - name: Link production project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
       - name: Pending migrations (dry run)
-        run: supabase db push --dry-run
+        run: supabase db push --linked --dry-run
       - name: Apply migrations
-        run: supabase db push
+        run: supabase db push --linked
+      - name: Migration history
+        run: supabase migration list --linked
 
       # The web app ships only after the migrations above succeeded (steps run in order and stop on failure).
       - uses: actions/setup-node@v4

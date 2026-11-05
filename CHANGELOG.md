@@ -2,6 +2,29 @@
 
 All notable changes to this project. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-11-06
+
+Part B: visits with one or two workers (2:1 support). Forward-only: 6 new migrations.
+
+### Added
+
+- `visit_workers`: 1–2 workers per visit.
+  - At most 2 is checked with the visit row locked; at least 1 is checked by deferred constraint triggers at commit.
+  - Double booking is enforced per worker across all their assignments, by a GiST exclusion constraint on a trigger-synced copy of the visit's time range and status.
+  - Adding and removing workers is audited.
+- Each assigned worker checks in and out separately. The first check-in sets `in_progress`, and the last assigned worker's check-out sets `completed`.
+- A worker sees a visit, its client and their colleague if they are any of its workers. The hours report counts every worker on a visit.
+- `book_visit` / `update_visit` RPCs write a visit and its workers in one transaction (`security invoker`).
+- Web app: optional second worker when booking or editing, every worker shown on the week view, and per-worker check-in/out on *My visits*.
+- Tests: 20 new pgTAP assertions (122 total), plus `scripts/test-part-b-backfill.sh` in CI. It applies Part B to a seeded v1.0.1 database and proves no visit lost its worker.
+- ADR 0002: plan for retiring `visits.worker_id` (expand now, measure, contract in a later major release).
+- Deploys print `supabase migration list` after pushing, which is the source for `docs/deployments.md`.
+
+### Changed
+
+- `visits.worker_id` is kept and synced both ways as the "primary worker", so the production mobile app keeps working.
+- `db push` / `migration list` in the deploy workflow pass `--linked` explicitly.
+
 ## [1.0.1] - 2026-11-05
 
 Hotfix for v1.0.0, shipped forward-only.
@@ -44,5 +67,6 @@ First production release: Part A (database) and the web app.
 - **Docs:** README, `docs/schema.md`, `docs/migrations-runbook.md`, ADR 0001 (double booking).
 - `scripts/create-demo-accounts.mjs` creates demo sign-ins on a hosted project, where seed data is never loaded.
 
+[1.1.0]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.1.0
 [1.0.1]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.0.0
