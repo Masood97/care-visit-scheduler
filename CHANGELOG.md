@@ -2,6 +2,14 @@
 
 All notable changes to this project. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-11-06
+
+Docs only, no migrations.
+
+### Added
+
+- `docs/deployments.md`: the pipeline's `supabase migration list` for staging and production after v1.1.0. Both show 22/22 migrations matching the repo.
+
 ## [1.1.0] - 2026-11-06
 
 Part B: visits with one or two workers (2:1 support). Forward-only: 6 new migrations.
@@ -67,6 +75,7 @@ First production release: Part A (database) and the web app.
 - **Docs:** README, `docs/schema.md`, `docs/migrations-runbook.md`, ADR 0001 (double booking).
 - `scripts/create-demo-accounts.mjs` creates demo sign-ins on a hosted project, where seed data is never loaded.
 
+[1.1.1]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.1.1
 [1.1.0]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.1.0
 [1.0.1]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.0.0
