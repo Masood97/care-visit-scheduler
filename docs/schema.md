@@ -115,13 +115,13 @@ The client and member lookups take `FOR SHARE` row locks. If a coordinator archi
 Indexes: `(organization_id, starts_at)` for the coordinator's week view, `(worker_id, starts_at)` for a worker's visits, and `(organization_id, client_id)` for the client FK. The exclusion constraint adds its own GiST index.
 
 ### `visit_events`
-Check-in and check-out records, written only by `check_in` / `check_out` _(functions added in #4)_.
+Check-in and check-out records, written only by `check_in` / `check_out`.
 - Composite FKs keep the visit and the worker in the event's organization.
 - `visit_events_one_per_worker_and_type` UNIQUE `(visit_id, worker_id, event_type)`: one check-in and one check-out per worker per visit. This also works for 2-worker visits in v1.1.0.
 - `distance_m`: metres from the client's home when the event happened.
 
 ### `audit_log`
-Append-only history of every insert, update and delete on `clients` and `visits` _(triggers and append-only guards added in #4)_.
+Append-only history of every insert, update and delete on `clients` and `visits`, written by the `clients_audit` and `visits_audit` triggers.
 - There are no foreign keys on purpose, so history survives deletion of the row it describes.
 - `audit_log_data_matches_action` CHECK: insert has only `new_data`, delete has only `old_data`, and update has both.
 - Index `(organization_id, changed_at desc)` for an owner browsing their organization's history.
@@ -142,12 +142,57 @@ The web app maps these to user-facing messages and never shows the raw error.
 | `CV005` | `enforce_visit_rules` | Only scheduled visits can be rescheduled or reassigned |
 | `CV006` | `enforce_visit_rules` | Visit can't start without a check-in |
 | `CV007` | `enforce_visit_rules` | Visit can't complete without a check-out |
+| `CV010` | `check_in` | Not the assigned worker (or no such visit) |
+| `CV011` | `check_in` | Visit isn't scheduled (already checked in, completed or cancelled) |
+| `CV012` | `check_in` | More than 30 minutes before the start |
+| `CV013` | `check_in` | After the scheduled end |
+| `CV014` | `check_in` | Further than 200 m from the client's home (the message includes the distance) |
+| `CV015` | `check_in` / `check_out` | Missing or invalid location |
+| `CV020` | `check_out` | Caller didn't check in to this visit |
+| `CV021` | `check_out` | Visit isn't in progress |
+| `CV030` | `reject_audit_log_change` | Audit log is append-only |
+| `CV040` | `guard_member_change` | Worker still has open visits (can't demote or remove) |
+| `CV041` | `guard_member_change` | Organization must keep at least one owner |
+| `CV042` | `guard_member_change` | Membership keys can't change in place |
+| `CV043` | `prevent_organization_change` | Clients and visits can't move to another organization |
+| `42501` | RLS / privileges | Not allowed for this user |
 
 ## Who can do what (RLS)
 
-Every table has row-level security enabled. Until the policies land in #4, no role except the database owner can read or write anything. `anon` has no table privileges at all.
+Every table has row-level security enabled, and every policy targets `authenticated`. `anon` has no table privileges. All checks use `auth.uid()` from the verified JWT. An organization id sent by the client is never trusted on its own: it has to match a membership row of the caller.
 
-_(Role-by-table matrix added in #4.)_
+| Table | Owner | Coordinator | Worker | Notes |
+| --- | --- | --- | --- | --- |
+| `organizations` | R | R | R | only organizations they're a member of |
+| `organization_members` | R I U D | R | R | colleagues in their own organizations; **only owners manage members** |
+| `clients` | R I U D | R I U D | R (own visits' clients) | workers see only clients on their own visits |
+| `visits` | R I U D | R I U D | R (own) | workers change visits **only** via `check_in` / `check_out` |
+| `visit_events` | R | R | R (own) | inserted only by `check_in` / `check_out` (no INSERT/UPDATE/DELETE privilege) |
+| `audit_log` | R | – | – | written only by triggers; **nobody** can update or delete it |
+| `worker_weekly_hours` (view) | R (org) | R (org) | R (own hours) | `security_invoker`: inherits the `visit_events` policies |
+
+R = select, I = insert, U = update, D = delete. Every I/U policy has a `with check`, so a row can't be written into, or moved to, an organization the user doesn't manage.
+
+The policies call three `security definer` helpers in the non-exposed `private` schema. Each has `search_path = ''` and answers a question about the current user only, which avoids policy recursion between `visits` and `clients`:
+
+- `private.is_member(org)`
+- `private.has_role(org, roles[])`
+- `private.is_worker_of_client(client)`
+
+## Functions and views
+
+| Object | Purpose |
+| --- | --- |
+| `public.check_in(visit_id, lat, lng)` | Rule 7. The caller must be the assigned worker, within 30 min before the start until the scheduled end, and within 200 m of the client's home (haversine). Locks the visit row, records a `check_in` event with the distance, and sets the visit to `in_progress`. |
+| `public.check_out(visit_id, lat, lng)` | Rule 8. The caller must be the worker who checked in. Records a `check_out` event and sets the visit to `completed`. |
+| `public.worker_weekly_hours` | Rule 10. Completed hours per worker per week: check-out minus check-in, grouped by Monday-start weeks in the organization's time zone. |
+| `private.audit_row_change()` | Rule 9. An AFTER trigger on `clients` and `visits` that appends old and new values plus `auth.uid()` to `audit_log`. |
+| `private.audit_member_change()` | Rule 9 extended. Membership inserts, role changes and removals are audited too (`row_id` = the member's user id). |
+| `private.guard_member_change()` | Keeps open visits on workers, keeps at least one owner (locks the organization row), and makes membership keys immutable. |
+| `private.prevent_organization_change()` | `organization_id` can't change on clients or visits, so a row (and its audit trail) never moves tenant. |
+| `private.reject_audit_log_change()` | Rule 9. Rejects UPDATE, DELETE and TRUNCATE on `audit_log` (`CV030`) even for roles that bypass RLS. UPDATE, DELETE and TRUNCATE are also revoked from `authenticated` and `service_role`. |
+
+Both RPCs are `security definer` with `search_path = ''`, and EXECUTE is granted to `authenticated` only. An unknown visit id returns the same error as another worker's visit, so ids can't be probed.
 
 ## Seed data
 
