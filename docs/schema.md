@@ -159,6 +159,8 @@ The web app maps these to user-facing messages and never shows the raw error.
 
 ## Who can do what (RLS)
 
+Access has two gates. **Table privileges** come first: they are granted explicitly in `20261105174258_explicit_api_grants.sql`, because the hosted projects don't auto-grant new tables to the API roles. **RLS policies** come second.
+
 Every table has row-level security enabled, and every policy targets `authenticated`. `anon` has no table privileges. All checks use `auth.uid()` from the verified JWT. An organization id sent by the client is never trusted on its own: it has to match a membership row of the caller.
 
 | Table | Owner | Coordinator | Worker | Notes |
