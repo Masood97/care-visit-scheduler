@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+# One run per PR; a new push cancels the run it replaces.
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  SUPABASE_CLI_VERSION: 2.122.1
+  NODE_VERSION: 22
+
+jobs:
+  database:
+    name: Database
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the migration checks can diff against the target branch
+
+      # Checks 5 and 6: merged migrations unchanged, new timestamps newer than the target branch.
+      - name: Check migration history against ${{ github.base_ref }}
+        run: bash scripts/check-migrations.sh "origin/${{ github.base_ref }}"
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      # Check 1: local Supabase database in the runner.
+      - name: Start local database
+        run: supabase db start
+
+      # Check 2: every migration applies to an empty database and the seed loads.
+      - name: Apply migrations and seed
+        run: supabase db reset
+
+      # Check 3: schema lint, failing on errors.
+      - name: Lint schema
+        run: supabase db lint --local --fail-on error
+
+      # Check 4: pgTAP tests.
+      - name: Run database tests
+        run: supabase test db
+
+      # Rule 3 under real concurrency: two sessions book the same slot at once.
+      - name: Concurrent double-booking test
+        run: bash scripts/test-concurrent-booking.sh
+
+      # Check 7: committed types match the schema.
+      - name: Check generated types are up to date
+        run: |
+          supabase gen types --lang typescript --local --schema public > "$RUNNER_TEMP/database.types.ts"
+          if ! diff -u lib/database.types.ts "$RUNNER_TEMP/database.types.ts"; then
+            echo "::error file=lib/database.types.ts::Types are out of date. Run 'npm run db:types' and commit the result."
+            exit 1
+          fi
+
+  web:
+    name: Web app
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Build-time placeholders; no real project is contacted during CI.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      # Check 8: type-check, lint and build.
+      - name: Type-check
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+
+  pr-title:
+    name: PR title
+    runs-on: ubuntu-latest
+    # Release PRs into main are titled "Release vX.Y.Z" by design, so only feature PRs are checked.
+    if: github.base_ref == 'develop'
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+            docs
+            refactor
+            test
+            ci
+            perf
+            build
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
