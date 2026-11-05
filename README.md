@@ -30,9 +30,26 @@ npm run dev                 # http://localhost:3000
 
 ```bash
 npm run db:test             # pgTAP tests in supabase/tests/ (needs the local stack running)
+npm run db:test-concurrency # two sessions book the same slot at once; exactly one must win
 ```
 
-_(The test list is added in #4.)_
+| File | Proves |
+| --- | --- |
+| `00_rls_enabled.test.sql` | every table in `public` has RLS enabled |
+| `10_visit_constraints.test.sql` | no double booking, valid times, archived clients, no deleting clients with visits, status flow, edit lock, same-org client, worker role, valid time zone |
+| `scripts/test-concurrent-booking.sh` | no double booking under concurrent bookings (run in CI) |
+
+_(RLS, check-in/out and audit tests are added in #4.)_
+
+### Local sign-in
+
+`npx supabase db reset` loads fake demo data. Every seeded user's password is `Password123!`:
+
+| Role | Harbour Home Care (Australia/Sydney) | Pennine Community Care (Europe/London) |
+| --- | --- | --- |
+| Owner | `owner@harbour.example` | `owner@pennine.example` |
+| Coordinator | `coordinator@harbour.example` | `coordinator@pennine.example` |
+| Worker | `worker1@harbour.example`, `worker2@harbour.example` | `worker1@pennine.example`, `worker2@pennine.example` |
 
 ## Adding a migration
 

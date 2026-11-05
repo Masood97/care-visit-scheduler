@@ -52,6 +52,10 @@ jobs:
       - name: Run database tests
         run: supabase test db
 
+      # Rule 3 under real concurrency: two sessions book the same slot at once.
+      - name: Concurrent double-booking test
+        run: bash scripts/test-concurrent-booking.sh
+
       # Check 7: committed types match the schema.
       - name: Check generated types are up to date
         run: |
