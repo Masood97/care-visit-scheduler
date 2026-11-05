@@ -17,9 +17,15 @@ export const visitSchema = z
   .object({
     clientId: z.uuid("Choose a client."),
     workerId: z.uuid("Choose a worker."),
+    // Optional second worker for 2:1 support ("" = none).
+    secondWorkerId: z.union([z.uuid(), z.literal("")]).optional(),
     startsAt: localDateTime,
     endsAt: localDateTime,
     notes: z.string().trim().max(500, "Keep notes under 500 characters.").optional(),
+  })
+  .refine((v) => !v.secondWorkerId || v.secondWorkerId !== v.workerId, {
+    path: ["secondWorkerId"],
+    message: "Choose two different workers.",
   })
   .refine((v) => v.endsAt > v.startsAt, { path: ["endsAt"], message: "The visit must end after it starts." })
   .refine(

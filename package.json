@@ -18,7 +18,8 @@
     "db:test": "supabase test db",
     "db:types": "supabase gen types --lang typescript --local --schema public > lib/database.types.ts",
     "db:check-migrations": "bash scripts/check-migrations.sh origin/develop",
-    "db:test-concurrency": "bash scripts/test-concurrent-booking.sh"
+    "db:test-concurrency": "bash scripts/test-concurrent-booking.sh",
+    "db:test-backfill": "bash scripts/test-part-b-backfill.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.2",

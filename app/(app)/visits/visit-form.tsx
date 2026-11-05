@@ -18,6 +18,8 @@ import { createVisit, updateVisit } from "./actions";
 
 type Option = { id: string; name: string };
 
+const NONE = "none";
+
 type Props = {
   clients: Option[];
   workers: Option[];
@@ -34,7 +36,7 @@ export function VisitFormDialog({ clients, workers, timeZone, visitId, defaultVa
   const [pending, startTransition] = useTransition();
   const form = useForm<VisitInput>({
     resolver: zodResolver(visitSchema),
-    defaultValues: { clientId: "", workerId: "", startsAt: "", endsAt: "", notes: "", ...defaultValues },
+    defaultValues: { clientId: "", workerId: "", secondWorkerId: "", startsAt: "", endsAt: "", notes: "", ...defaultValues },
   });
   const { errors } = form.formState;
 
@@ -116,6 +118,34 @@ export function VisitFormDialog({ clients, workers, timeZone, visitId, defaultVa
               )}
             />
             {errors.workerId && <p className="text-sm text-destructive">{errors.workerId.message}</p>}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="secondWorkerId">Second worker (optional, for 2:1 support)</Label>
+            <Controller
+              control={form.control}
+              name="secondWorkerId"
+              render={({ field }) => (
+                <Select
+                  // Radix Select can't hold an empty value, so "none" stands for no second worker.
+                  value={field.value || NONE}
+                  onValueChange={(value) => field.onChange(value === NONE ? "" : value)}
+                >
+                  <SelectTrigger id="secondWorkerId" className="w-full" aria-invalid={!!errors.secondWorkerId}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>No second worker</SelectItem>
+                    {workers.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.secondWorkerId && <p className="text-sm text-destructive">{errors.secondWorkerId.message}</p>}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

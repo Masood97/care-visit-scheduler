@@ -43,7 +43,7 @@ select results_eq(
 
 select results_eq(
   $$ select action::text from public.audit_log
-     where row_id = 'ed000000-0000-0000-0000-000000000001' order by id $$,
+     where table_name = 'visits' and row_id = 'ed000000-0000-0000-0000-000000000001' order by id $$,
   $$ values ('insert'), ('update') $$,
   'rule 9: insert and update on visits are audited'
 );

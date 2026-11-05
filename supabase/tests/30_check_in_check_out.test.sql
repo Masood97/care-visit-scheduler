@@ -98,7 +98,7 @@ select ok(
 
 select throws_ok(
   $$ select public.check_in('cd000000-0000-0000-0000-000000000001', 51.5000, -0.1200) $$,
-  'CV011', null,
+  'CV016', null,
   'rule 7: a visit cannot be checked in to twice'
 );
 
@@ -130,7 +130,7 @@ select is(
 
 select throws_ok(
   $$ select public.check_out('cd000000-0000-0000-0000-000000000001', 51.5000, -0.1200) $$,
-  'CV021', null,
+  'CV022', null,
   'rule 8: a completed visit cannot be checked out of again'
 );
 
