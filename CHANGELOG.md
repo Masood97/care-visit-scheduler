@@ -2,6 +2,22 @@
 
 All notable changes to this project. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-11-06
+
+Bonus items and polish. No migrations.
+
+### Added
+
+- **End-to-end tests** (Playwright, `e2e/`) run in CI as the required `E2E` check against a seeded local stack. They cover:
+  - coordinator: booking 2:1 and 1:1 visits, the double-booking message, the cancel dialog, archive and restore
+  - worker at phone size with faked location: check-in refused from ~530 m, accepted at the door, then check-out
+  - owner: the hours report
+- **Index evidence:** `scripts/explain-indexes.sql` and the *Indexes for the three most common queries* section of `docs/schema.md`. It has EXPLAIN ANALYZE plans for the week view, a worker's visits and the RLS membership check, on ~20k visits.
+
+### Changed
+
+- The week view is grouped by local day and marks 2:1 visits. Cancelling a visit asks for confirmation in an accessible dialog instead of `window.confirm`.
+
 ## [1.1.1] - 2026-11-06
 
 Docs only, no migrations.
@@ -75,6 +91,7 @@ First production release: Part A (database) and the web app.
 - **Docs:** README, `docs/schema.md`, `docs/migrations-runbook.md`, ADR 0001 (double booking).
 - `scripts/create-demo-accounts.mjs` creates demo sign-ins on a hosted project, where seed data is never loaded.
 
+[1.2.0]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.2.0
 [1.1.1]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.1.1
 [1.1.0]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.1.0
 [1.0.1]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.0.1

@@ -165,7 +165,7 @@ The two projects are in different regions. That doesn't affect correctness, but 
 
 ## Time spent
 
-About **7 hours**, from 5 November 2026 17:23 to 6 November 00:30 PKT. That includes setting up GitHub, Supabase and Vercel, and waiting on production deploy approvals.
+About **7 hours** for the brief (v1.0.0 to v1.1.1), from 5 November 2026 17:23 to 6 November 00:30 PKT. That includes setting up GitHub, Supabase and Vercel, and waiting on production deploy approvals. About **1 more hour** went on the bonus items and polish in v1.2.0 (index evidence, Playwright E2E in CI, week view and confirm dialog), ending around 01:45 PKT.
 
 ## What was cut
 
