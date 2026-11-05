@@ -1,0 +1,6 @@
+# Normalise line endings so migration checks and type diffs behave the same
+# on Windows laptops and Linux CI runners.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
