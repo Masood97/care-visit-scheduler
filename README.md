@@ -148,18 +148,23 @@ The two projects are in different regions. That doesn't affect correctness, but 
 
 ## Documentation
 
-_(Added as each piece lands.)_
-
-- `docs/schema.md`: ER diagram, tables, constraints and the role-by-table access matrix
-- `docs/migrations-runbook.md`: how a migration travels from a laptop to production
-- `docs/adr/`: decision records
-- `docs/deployments.md`: `supabase migration list` output for staging and production
+- [`docs/schema.md`](docs/schema.md): ER diagram, tables, constraints, the role-by-table access matrix, functions and error codes
+- [`docs/migrations-runbook.md`](docs/migrations-runbook.md): how a migration travels from a laptop to production, failed deploys, fixing forward and large-table changes
+- [`docs/adr/0001`](docs/adr/0001-double-booking-exclusion-constraint.md): how double booking is enforced
+- [`docs/adr/0002`](docs/adr/0002-multi-worker-visits-and-worker-id.md): 2:1 visits and the plan for retiring `visits.worker_id`
+- [`docs/deployments.md`](docs/deployments.md): `supabase migration list` for staging and production
 - [`CHANGELOG.md`](CHANGELOG.md): release notes
 
 ## Time spent
 
-Started 5 November 2026, 17:23 PKT. _(Total added at submission.)_
+About **7 hours**, from 5 November 2026 17:23 to 6 November 00:30 PKT. That includes setting up GitHub, Supabase and Vercel, and waiting on production deploy approvals.
 
 ## What was cut
 
-_(Filled in at submission.)_
+Scope was cut instead of quality:
+
+- **Bonus items:** TanStack Query and Zustand (server components and server actions cover the app's data needs), end-to-end browser tests in CI (`scripts/smoke-test.mjs` is a local, HTTP-level smoke test only), and EXPLAIN ANALYZE evidence for indexes. The indexes exist (see `docs/schema.md`), but no query plans are recorded.
+- **Screens beyond the brief:** a member-management UI (owners can manage members through the API, enforced by RLS and guards, but there's no screen), an audit-log viewer, and password reset or invite emails.
+- **2:1 edge case:** if one of two workers never checks in, the visit stays `in_progress`. There's no coordinator "complete with one worker" action yet (ADR 0002).
+- **Staging demo data:** staging gets demo sign-ins only when `scripts/create-demo-accounts.mjs` is run against it.
+- **Screen recording:** optional, not made.
