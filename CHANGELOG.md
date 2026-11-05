@@ -2,6 +2,12 @@
 
 All notable changes to this project. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] - 2026-11-06
+
+### Fixed
+
+- **Slow server-rendered pages.** The Vercel functions ran in the default region `iad1` (Washington) while the production database is in Singapore, so each of a page's 3–4 database calls took a ~200 ms round trip. Functions now run in `sin1` (`vercel.json` → `regions`). No migrations.
+
 ## [1.2.0] - 2026-11-06
 
 Bonus items and polish. No migrations.
@@ -91,6 +97,7 @@ First production release: Part A (database) and the web app.
 - **Docs:** README, `docs/schema.md`, `docs/migrations-runbook.md`, ADR 0001 (double booking).
 - `scripts/create-demo-accounts.mjs` creates demo sign-ins on a hosted project, where seed data is never loaded.
 
+[1.2.1]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.2.1
 [1.2.0]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.2.0
 [1.1.1]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.1.1
 [1.1.0]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.1.0
