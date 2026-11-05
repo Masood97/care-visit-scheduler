@@ -163,7 +163,7 @@ About **7 hours**, from 5 November 2026 17:23 to 6 November 00:30 PKT. That incl
 
 Scope was cut instead of quality:
 
-- **Bonus items:** TanStack Query and Zustand (server components and server actions cover the app's data needs), end-to-end browser tests in CI (`scripts/smoke-test.mjs` is a local, HTTP-level smoke test only), and EXPLAIN ANALYZE evidence for indexes. The indexes exist (see `docs/schema.md`), but no query plans are recorded.
+- **Bonus items:** TanStack Query and Zustand (server components and server actions cover the app's data needs), and end-to-end browser tests in CI (`scripts/smoke-test.mjs` is a local, HTTP-level smoke test only). The index bonus is done: see *Indexes for the three most common queries* in `docs/schema.md`.
 - **Screens beyond the brief:** a member-management UI (owners can manage members through the API, enforced by RLS and guards, but there's no screen), an audit-log viewer, and password reset or invite emails.
 - **2:1 edge case:** if one of two workers never checks in, the visit stays `in_progress`. There's no coordinator "complete with one worker" action yet (ADR 0002).
 - **Staging demo data:** staging gets demo sign-ins only when `scripts/create-demo-accounts.mjs` is run against it.
