@@ -1,11 +1,19 @@
-// Placeholder home page. The role-based screens arrive in feature/web-app (#5).
-export default function Home() {
-  return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-3 px-4 py-16">
-      <h1 className="text-2xl font-semibold tracking-tight">Care Visits</h1>
-      <p className="text-muted-foreground">
-        Home-care visit scheduling for agencies, coordinators and support workers.
-      </p>
-    </main>
-  );
+import { redirect } from "next/navigation";
+
+import { getSession, homePathFor } from "@/lib/session";
+
+// Sends each user to the screen for their role in the active organization.
+export default async function Home() {
+  const { active } = await getSession();
+  if (!active) {
+    return (
+      <main className="mx-auto max-w-md px-4 py-16 text-center">
+        <h1 className="text-xl font-semibold">No organization yet</h1>
+        <p className="mt-2 text-muted-foreground">
+          Your account isn&apos;t a member of any agency. Ask an owner to add you.
+        </p>
+      </main>
+    );
+  }
+  redirect(homePathFor(active.role));
 }

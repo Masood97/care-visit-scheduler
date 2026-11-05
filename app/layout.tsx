@@ -1,5 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import { Toaster } from "@/components/ui/sonner";
+
 import "./globals.css";
 
 // globals.css maps Tailwind's font-sans / font-mono to these CSS variables.
@@ -18,13 +21,19 @@ export const metadata: Metadata = {
   description: "Schedule home-care visits, check in on site and report worked hours.",
 };
 
+// Workers use the app on a phone.
+export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        {children}
+        <Toaster richColors position="top-center" />
+      </body>
     </html>
   );
 }

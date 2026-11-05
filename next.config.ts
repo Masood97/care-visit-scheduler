@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
+// Every page renders the signed-in user's own data (cookies + RLS), so there is nothing
+// to cache or prerender: the create-next-app defaults cacheComponents/partialPrefetching
+// are left off.
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
   turbopack: {
     rules: {
       "*.css": {
