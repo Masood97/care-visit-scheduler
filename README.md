@@ -123,6 +123,17 @@ The service-role / secret key is never used by the app and is never stored in Ve
 | `VERCEL_ORG_ID` | production | Vercel team / account id |
 | `VERCEL_PROJECT_ID` | production | Vercel project id |
 
+## Demo sign-ins on staging and production
+
+`supabase/seed.sql` is never pushed to a hosted project. To give each role a sign-in there, run `scripts/create-demo-accounts.mjs` from your laptop. It creates one fake agency (*Bayside Demo Care*, Australia/Sydney) with an owner, a coordinator, two workers, three clients and a week of visits. It writes data only, never schema. It needs the project's secret key, which is read from environment variables and never stored:
+
+```powershell
+$env:SUPABASE_URL = "https://<project-ref>.supabase.co"
+$env:SUPABASE_SECRET_KEY = "<secret key from Project Settings → API Keys>"
+$env:DEMO_PASSWORD = "<password for the demo users>"
+node scripts/create-demo-accounts.mjs
+```
+
 ## Hosted projects
 
 | Environment | Supabase project ref | Region |
@@ -140,7 +151,7 @@ _(Added as each piece lands.)_
 - `docs/migrations-runbook.md`: how a migration travels from a laptop to production
 - `docs/adr/`: decision records
 - `docs/deployments.md`: `supabase migration list` output for staging and production
-- `CHANGELOG.md`: release notes
+- [`CHANGELOG.md`](CHANGELOG.md): release notes
 
 ## Time spent
 
