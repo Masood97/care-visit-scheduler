@@ -2,6 +2,19 @@
 
 All notable changes to this project. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-11-05
+
+Hotfix for v1.0.0, shipped forward-only.
+
+### Fixed
+
+- **Every API request in production failed with `permission denied`.** The hosted projects don't auto-grant new `public` tables to the Data API roles, while the local stack did. The new migration `20261105174258_explicit_api_grants.sql` grants `authenticated` exactly what the RLS policies allow. It grants `service_role` read/write on core tables and read-only on events and the audit log. `anon` gets nothing.
+- Local stack now has `auto_expose_new_tables = false`, so a missing grant fails the pgTAP tests instead of reaching production.
+
+### Changed
+
+- CI also runs on every push to `main`, so release merge commits get their own green run.
+
 ## [1.0.0] - 2026-11-05
 
 First production release: Part A (database) and the web app.
@@ -31,4 +44,5 @@ First production release: Part A (database) and the web app.
 - **Docs:** README, `docs/schema.md`, `docs/migrations-runbook.md`, ADR 0001 (double booking).
 - `scripts/create-demo-accounts.mjs` creates demo sign-ins on a hosted project, where seed data is never loaded.
 
+[1.0.1]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Masood97/care-visit-scheduler/releases/tag/v1.0.0
