@@ -100,6 +100,50 @@ jobs:
       - name: Build
         run: npm run build
 
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      # Full local stack (Postgres + Auth + REST): migrations and the seed are applied on start.
+      - name: Start local Supabase
+        run: supabase start
+
+      # The local publishable key is a fixed development value, but keep it out of the log anyway.
+      - name: Point the app at the local stack
+        run: |
+          key="$(supabase status -o env | grep -E '^(PUBLISHABLE_KEY|ANON_KEY)=' | head -1 | cut -d= -f2- | tr -d '"')"
+          echo "::add-mask::${key}"
+          echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${key}" >> "$GITHUB_ENV"
+
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Build
+        run: npm run build
+      - name: Playwright (coordinator, worker on a phone, owner)
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   pr-title:
     name: PR title
     runs-on: ubuntu-latest
