@@ -46,7 +46,15 @@ npm run dev                 # http://localhost:3000 — sign in with a seeded us
 ```bash
 npm run db:test             # pgTAP tests in supabase/tests/ (needs the local stack running)
 npm run db:test-concurrency # two sessions book the same slot at once; exactly one must win
+npm run db:test-backfill    # Part B migrations on a seeded v1.0.1 database
+npx supabase db reset && npm run test:e2e   # Playwright browser tests (reuses a running `npm run dev`)
 ```
+
+**End-to-end (Playwright, `e2e/`; the *E2E* job in CI).** Real Chromium, against the local stack with the seed:
+
+- coordinator: signed-out redirect; books a 2:1 visit and a 1:1 visit; gets a plain double-booking message (never the raw error); cancels through the confirm dialog; archives and restores a client
+- worker, at **phone size** with faked browser location: check-in from ~530 m away is refused with the distance; from the client's door it succeeds; check-out completes the visit; the 2:1 visit shows the colleague
+- owner: the weekly hours report
 
 | File | Proves |
 | --- | --- |
@@ -157,13 +165,13 @@ The two projects are in different regions. That doesn't affect correctness, but 
 
 ## Time spent
 
-About **7 hours**, from 5 November 2026 17:23 to 6 November 00:30 PKT. That includes setting up GitHub, Supabase and Vercel, and waiting on production deploy approvals.
+About **7 hours** for the brief (v1.0.0 to v1.1.1), from 5 November 2026 17:23 to 6 November 00:30 PKT. That includes setting up GitHub, Supabase and Vercel, and waiting on production deploy approvals. About **1 more hour** went on the bonus items and polish in v1.2.0 (index evidence, Playwright E2E in CI, week view and confirm dialog), ending around 01:45 PKT.
 
 ## What was cut
 
 Scope was cut instead of quality:
 
-- **Bonus items:** TanStack Query and Zustand (server components and server actions cover the app's data needs), end-to-end browser tests in CI (`scripts/smoke-test.mjs` is a local, HTTP-level smoke test only), and EXPLAIN ANALYZE evidence for indexes. The indexes exist (see `docs/schema.md`), but no query plans are recorded.
+- **Bonus: TanStack Query and Zustand.** The app reads data in Server Components and writes through Server Actions, so it has no client-side server cache to manage and no shared client state worth a store. Adding them would add code without a job to do. The other two bonus items are done: Playwright E2E in CI, and EXPLAIN ANALYZE evidence in `docs/schema.md`.
 - **Screens beyond the brief:** a member-management UI (owners can manage members through the API, enforced by RLS and guards, but there's no screen), an audit-log viewer, and password reset or invite emails.
 - **2:1 edge case:** if one of two workers never checks in, the visit stays `in_progress`. There's no coordinator "complete with one worker" action yet (ADR 0002).
 - **Staging demo data:** staging gets demo sign-ins only when `scripts/create-demo-accounts.mjs` is run against it.

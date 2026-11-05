@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,8 @@ export default async function VisitsPage({ searchParams }: PageProps<"/visits">)
     );
     return {
       ...v,
+      day: toLocalInputValue(v.starts_at, tz).slice(0, 10), // local date in the agency's zone
+      workerCount: assigned.length,
       workerNames: assigned.map((a) => a.member?.full_name ?? "").join(" + "),
       secondWorkerId: assigned.find((a) => a.worker_id !== v.worker_id)?.worker_id ?? "",
     };
@@ -93,7 +96,7 @@ export default async function VisitsPage({ searchParams }: PageProps<"/visits">)
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>When</TableHead>
+                <TableHead>Time</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Workers</TableHead>
                 <TableHead>Status</TableHead>
@@ -102,14 +105,29 @@ export default async function VisitsPage({ searchParams }: PageProps<"/visits">)
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visits.map((v) => (
-                <TableRow key={v.id}>
-                  <TableCell className="whitespace-nowrap">
-                    {formatDay(toLocalInputValue(v.starts_at, tz).slice(0, 10))} {formatTime(v.starts_at, tz)}–
-                    {formatTime(v.ends_at, tz)}
+              {visits.map((v, i) => (
+                <Fragment key={v.id}>
+                {/* A heading row for each local day of the week. */}
+                {(i === 0 || v.day !== visits[i - 1].day) && (
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableCell colSpan={6} className="py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {formatDay(v.day)}
+                    </TableCell>
+                  </TableRow>
+                )}
+                <TableRow>
+                  <TableCell className="whitespace-nowrap tabular-nums">
+                    {formatTime(v.starts_at, tz)}–{formatTime(v.ends_at, tz)}
                   </TableCell>
                   <TableCell>{v.client?.full_name}</TableCell>
-                  <TableCell>{v.workerNames}</TableCell>
+                  <TableCell>
+                    {v.workerNames}
+                    {v.workerCount === 2 && (
+                      <Badge variant="secondary" className="ml-2">
+                        2:1
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={v.status} />
                   </TableCell>
@@ -136,13 +154,17 @@ export default async function VisitsPage({ searchParams }: PageProps<"/visits">)
                             </Button>
                           }
                         />
-                        <CancelVisitButton visitId={v.id} />
+                        <CancelVisitButton
+                          visitId={v.id}
+                          summary={`${v.client?.full_name ?? "Visit"}, ${formatDay(v.day)} ${formatTime(v.starts_at, tz)}`}
+                        />
                       </>
                     ) : (
                       <Badge variant="outline">Locked</Badge>
                     )}
                   </TableCell>
                 </TableRow>
+                </Fragment>
               ))}
             </TableBody>
           </Table>
