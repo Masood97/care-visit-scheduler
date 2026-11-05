@@ -16,15 +16,30 @@ A multi-tenant scheduling platform for home-care agencies. Coordinators book vis
 
 ## Local setup
 
-_(Completed in #3 and #5, once there is a schema and an app to run.)_
-
 ```bash
 npm ci                      # install dependencies, including the Supabase CLI
-npx supabase start          # start Postgres, Auth and Studio in Docker
-npx supabase db reset       # apply every migration and load supabase/seed.sql
-cp .env.example .env.local  # then paste the Publishable key from `npx supabase status`
-npm run dev                 # http://localhost:3000
+npx supabase start          # start Postgres + Auth in Docker; applies every migration and loads the seed
+cp .env.example .env.local  # then paste the "Publishable" key printed by `npx supabase status`
+npm run dev                 # http://localhost:3000 — sign in with a seeded user (below)
 ```
+
+`npx supabase db reset` rebuilds the database from the migrations and seed at any time. If another local Supabase project is using ports 54321–54324, stop it first with `npx supabase stop` in that project.
+
+## Web app
+
+| Role | Screens |
+| --- | --- |
+| Coordinator | **Visits**: the week's visits for the organization (Monday to Sunday in the agency's time zone), with book, edit and cancel. **Clients**: add, edit, archive and restore. **Hours**: the report. |
+| Worker | **My visits**: a phone-sized list of their own visits, with *Check in* / *Check out* using the browser's location. **My hours** |
+| Owner | **Hours**: completed hours per worker per week, plus the coordinator screens |
+
+- **Auth:** Supabase email + password. `proxy.ts` refreshes the session cookies and sends signed-out visitors to `/login`.
+- **Data:** Server Components and Server Actions use `@supabase/ssr` with the signed-in user's JWT and the generated `Database` types. Row-level security decides what each request can read or change. The app has no service-role key.
+- **Forms:** React Hook Form + Zod on the client, re-validated with the same schemas in the server action (`lib/schemas.ts`).
+- **Time zones:** visit times are entered and shown in the organization's zone. The app sends `2026-11-06 09:00 Australia/Sydney` and Postgres converts it, daylight saving included (`lib/time.ts`).
+- **Errors:** database errors are mapped to plain messages by SQLSTATE or constraint name (`lib/errors.ts`). For example, a double booking shows "This worker already has a visit at that time", and a far-away check-in shows "You're about 480 m from the client's home…". A raw database error is never shown.
+- **Multiple agencies:** a user who belongs to several organizations switches between them in the header.
+- **Smoke test:** `scripts/smoke-test.mjs` signs in as each seeded role against a running app and checks what each role sees and where it is redirected.
 
 ## Running the tests
 
