@@ -37,9 +37,13 @@ npm run db:test-concurrency # two sessions book the same slot at once; exactly o
 | --- | --- |
 | `00_rls_enabled.test.sql` | every table in `public` has RLS enabled |
 | `10_visit_constraints.test.sql` | no double booking, valid times, archived clients, no deleting clients with visits, status flow, edit lock, same-org client, worker role, valid time zone |
+| `20_rls_tenant_isolation.test.sql` | one organization can't read or write another's rows (every table); a worker can't see another worker's visits; workers can't edit visits or write events directly; only owners manage members; anon has no access |
+| `30_check_in_check_out.test.sql` | check-in from 500 m is rejected; time window; only the assigned worker checks in; only the worker who checked in checks out; status becomes in_progress, then completed |
+| `40_audit_log.test.sql` | insert/update/delete on clients and visits are audited with who and old/new values; owners read but can't update, delete or truncate it, and neither can the database owner |
+| `50_worker_weekly_hours.test.sql` | completed hours per worker per week in the organization's time zone; workers see only their own |
 | `scripts/test-concurrent-booking.sh` | no double booking under concurrent bookings (run in CI) |
 
-_(RLS, check-in/out and audit tests are added in #4.)_
+The brief's required tests map to: cross-org read → `20`; worker can't see another's visits → `20`; double booking → `10` and the concurrency script; 500 m check-in → `30`; invalid status change → `10`; audit log can't be changed → `40`.
 
 ### Local sign-in
 

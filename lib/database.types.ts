@@ -134,10 +134,59 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "worker_weekly_hours": {
+                  Row: {
+                    "hours": number | null,"organization_id": string,"visits_completed": number | null,"week_start": string | null,"worker_id": string,"worker_name": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "visit_events_worker_fk"
+      columns: ["organization_id","worker_id"]
+isOneToOne: false
+      referencedRelation: "organization_members"
+      referencedColumns: ["organization_id","user_id"]
+    }
+                  ]
+                }
           }
           Functions: {
-            [_ in never]: never
+            "check_in":
+{ Args: { "p_lat": number,"p_lng": number,"p_visit_id": string }; Returns: {
+              "distance_m": number,
+"event_type": Database["public"]['Enums']["visit_event_type"],
+"id": string,
+"latitude": number,
+"longitude": number,
+"occurred_at": string,
+"organization_id": string,
+"visit_id": string,
+"worker_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "visit_events"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"check_out":
+{ Args: { "p_lat": number,"p_lng": number,"p_visit_id": string }; Returns: {
+              "distance_m": number,
+"event_type": Database["public"]['Enums']["visit_event_type"],
+"id": string,
+"latitude": number,
+"longitude": number,
+"occurred_at": string,
+"organization_id": string,
+"visit_id": string,
+"worker_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "visit_events"
+        isOneToOne: true
+        isSetofReturn: false
+      } }
           }
           Enums: {
             "audit_action": "insert"|"update"|"delete","client_status": "active"|"archived","member_role": "owner"|"coordinator"|"worker","visit_event_type": "check_in"|"check_out","visit_status": "scheduled"|"in_progress"|"completed"|"cancelled"
