@@ -28,11 +28,27 @@ npm run dev                 # http://localhost:3000
 
 ## Running the tests
 
-_(Added in #4.)_
+```bash
+npm run db:test             # pgTAP tests in supabase/tests/ (needs the local stack running)
+```
+
+_(The test list is added in #4.)_
 
 ## Adding a migration
 
-_(Added in #2 and #3. Full detail lives in `docs/migrations-runbook.md`.)_
+```bash
+npx supabase migration new <snake_case_description>   # never hand-pick the timestamp
+# write the SQL and its pgTAP tests, then:
+npm run db:reset && npm run db:lint && npm run db:test
+npm run db:types            # commit the regenerated lib/database.types.ts
+```
+
+Merged migrations are never edited: fix forward with a new file. CI blocks a PR that edits, renames or deletes an existing migration, or adds one with an older timestamp. The full path to production, failure handling and large-table techniques are in [`docs/migrations-runbook.md`](docs/migrations-runbook.md).
+
+## CI/CD
+
+- **`ci.yml`** runs on every PR into `develop` or `main`. The **Database** job checks the migration history, starts Postgres, resets with migrations and seed, lints, runs pgTAP and checks the generated types. The **Web app** job type-checks, lints and builds. **PR title** checks Conventional Commits, and **Secret scan** runs gitleaks.
+- **`deploy.yml`** runs on every push. On `develop` it pushes migrations to staging. On `main` it waits for manual approval, pushes migrations to production, then deploys the web app to Vercel.
 
 ## Branches and releases
 

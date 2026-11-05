@@ -16,7 +16,8 @@
     "db:reset": "supabase db reset",
     "db:lint": "supabase db lint --fail-on error",
     "db:test": "supabase test db",
-    "db:types": "supabase gen types typescript --local > lib/database.types.ts"
+    "db:types": "supabase gen types --lang typescript --local --schema public > lib/database.types.ts",
+    "db:check-migrations": "bash scripts/check-migrations.sh origin/develop"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
