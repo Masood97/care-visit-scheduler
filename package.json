@@ -17,7 +17,8 @@
     "db:lint": "supabase db lint --fail-on error",
     "db:test": "supabase test db",
     "db:types": "supabase gen types --lang typescript --local --schema public > lib/database.types.ts",
-    "db:check-migrations": "bash scripts/check-migrations.sh origin/develop"
+    "db:check-migrations": "bash scripts/check-migrations.sh origin/develop",
+    "db:test-concurrency": "bash scripts/test-concurrent-booking.sh"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

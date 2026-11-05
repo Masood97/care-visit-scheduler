@@ -5,7 +5,133 @@ export type Database = {
   
   "public": {
           Tables: {
-            [_ in never]: never
+            "audit_log": {
+                  Row: {
+                    "action": Database["public"]['Enums']["audit_action"],"changed_at": string,"changed_by": string | null,"id": number,"new_data": Json | null,"old_data": Json | null,"organization_id": string,"row_id": string,"table_name": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": Database["public"]['Enums']["audit_action"],"changed_at"?: string,"changed_by"?: string | null,"id"?: never,"new_data"?: Json | null,"old_data"?: Json | null,"organization_id": string,"row_id": string,"table_name": string
+                  }
+                  Update: {
+                    "action"?: Database["public"]['Enums']["audit_action"],"changed_at"?: string,"changed_by"?: string | null,"id"?: never,"new_data"?: Json | null,"old_data"?: Json | null,"organization_id"?: string,"row_id"?: string,"table_name"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"clients": {
+                  Row: {
+                    "address": string,"created_at": string,"full_name": string,"id": string,"latitude": number,"longitude": number,"organization_id": string,"status": Database["public"]['Enums']["client_status"],"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "address": string,"created_at"?: string,"full_name": string,"id"?: string,"latitude": number,"longitude": number,"organization_id": string,"status"?: Database["public"]['Enums']["client_status"],"updated_at"?: string
+                  }
+                  Update: {
+                    "address"?: string,"created_at"?: string,"full_name"?: string,"id"?: string,"latitude"?: number,"longitude"?: number,"organization_id"?: string,"status"?: Database["public"]['Enums']["client_status"],"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "clients_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"organization_members": {
+                  Row: {
+                    "created_at": string,"full_name": string,"organization_id": string,"role": Database["public"]['Enums']["member_role"],"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"full_name": string,"organization_id": string,"role": Database["public"]['Enums']["member_role"],"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"full_name"?: string,"organization_id"?: string,"role"?: Database["public"]['Enums']["member_role"],"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "organization_members_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"organizations": {
+                  Row: {
+                    "created_at": string,"id": string,"name": string,"time_zone": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"name": string,"time_zone": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"name"?: string,"time_zone"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"visit_events": {
+                  Row: {
+                    "distance_m": number,"event_type": Database["public"]['Enums']["visit_event_type"],"id": string,"latitude": number,"longitude": number,"occurred_at": string,"organization_id": string,"visit_id": string,"worker_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "distance_m": number,"event_type": Database["public"]['Enums']["visit_event_type"],"id"?: string,"latitude": number,"longitude": number,"occurred_at"?: string,"organization_id": string,"visit_id": string,"worker_id": string
+                  }
+                  Update: {
+                    "distance_m"?: number,"event_type"?: Database["public"]['Enums']["visit_event_type"],"id"?: string,"latitude"?: number,"longitude"?: number,"occurred_at"?: string,"organization_id"?: string,"visit_id"?: string,"worker_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "visit_events_visit_fk"
+      columns: ["organization_id","visit_id"]
+isOneToOne: false
+      referencedRelation: "visits"
+      referencedColumns: ["organization_id","id"]
+    },{
+      foreignKeyName: "visit_events_worker_fk"
+      columns: ["organization_id","worker_id"]
+isOneToOne: false
+      referencedRelation: "organization_members"
+      referencedColumns: ["organization_id","user_id"]
+    }
+                  ]
+                },"visits": {
+                  Row: {
+                    "client_id": string,"created_at": string,"ends_at": string,"id": string,"notes": string | null,"organization_id": string,"starts_at": string,"status": Database["public"]['Enums']["visit_status"],"updated_at": string,"worker_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "client_id": string,"created_at"?: string,"ends_at": string,"id"?: string,"notes"?: string | null,"organization_id": string,"starts_at": string,"status"?: Database["public"]['Enums']["visit_status"],"updated_at"?: string,"worker_id": string
+                  }
+                  Update: {
+                    "client_id"?: string,"created_at"?: string,"ends_at"?: string,"id"?: string,"notes"?: string | null,"organization_id"?: string,"starts_at"?: string,"status"?: Database["public"]['Enums']["visit_status"],"updated_at"?: string,"worker_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "visits_client_fk"
+      columns: ["organization_id","client_id"]
+isOneToOne: false
+      referencedRelation: "clients"
+      referencedColumns: ["organization_id","id"]
+    },{
+      foreignKeyName: "visits_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "visits_worker_fk"
+      columns: ["organization_id","worker_id"]
+isOneToOne: false
+      referencedRelation: "organization_members"
+      referencedColumns: ["organization_id","user_id"]
+    }
+                  ]
+                }
           }
           Views: {
             [_ in never]: never
@@ -14,7 +140,7 @@ export type Database = {
             [_ in never]: never
           }
           Enums: {
-            [_ in never]: never
+            "audit_action": "insert"|"update"|"delete","client_status": "active"|"archived","member_role": "owner"|"coordinator"|"worker","visit_event_type": "check_in"|"check_out","visit_status": "scheduled"|"in_progress"|"completed"|"cancelled"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -130,7 +256,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            
+            "audit_action": ["insert", "update", "delete"],"client_status": ["active", "archived"],"member_role": ["owner", "coordinator", "worker"],"visit_event_type": ["check_in", "check_out"],"visit_status": ["scheduled", "in_progress", "completed", "cancelled"]
           }
         }
 } as const
