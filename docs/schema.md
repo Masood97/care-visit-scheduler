@@ -234,3 +234,80 @@ Both RPCs are `security definer` with `search_path = ''`, and EXECUTE is granted
 ## Seed data
 
 `supabase/seed.sql` contains fake data only and is loaded by `supabase db reset`. It is never pushed to a hosted project. It creates 2 organizations (Australia/Sydney and Europe/London). Each has 1 owner, 1 coordinator, 2 workers, 5 clients and 16 visits around the current date: 8 completed with check-in and check-out events, 2 cancelled, 1 in progress (checked in) and 5 scheduled. All seeded users sign in with `Password123!`, for example `coordinator@harbour.example` or `worker1@pennine.example`.
+
+## Indexes for the three most common queries
+
+Measured with `scripts/explain-indexes.sql`. The script generates realistic volume inside a transaction and rolls it back afterwards: 110 organizations, 2,208 members, 20,032 visits (and as many assignments), and 19,234 check-in/out events. Run it with `docker exec -i supabase_db_care-visit-scheduler psql -U postgres -X < scripts/explain-indexes.sql`. UUIDs and timestamps below are shortened.
+
+### 1. Coordinator week view: an organization's visits in one week
+
+`visits_organization_id_starts_at_idx (organization_id, starts_at)`: equality on the tenant, then a range on the start time. 560 visits in 0.44 ms, reading 32 buffers from 20k rows.
+
+```sql
+select … from visits where organization_id = $1 and starts_at >= $2 and starts_at < $2 + interval '7 days' order by starts_at;
+```
+```text
+Sort (actual time=0.369..0.400 rows=560 loops=1)
+  Sort Key: starts_at
+  Sort Method: quicksort  Memory: 73kB
+  Buffers: shared hit=32
+  ->  Bitmap Heap Scan on visits (actual time=0.070..0.195 rows=560 loops=1)
+        Recheck Cond: ((organization_id = '…'::uuid) AND (starts_at >= '…'::timestamptz) AND (starts_at < ('…'::timestamptz + '7 days'::interval)))
+        Heap Blocks: exact=29
+        Buffers: shared hit=32
+        ->  Bitmap Index Scan on visits_organization_id_starts_at_idx (actual time=0.058..0.058 rows=560 loops=1)
+              Index Cond: ((organization_id = '…'::uuid) AND (starts_at >= '…'::timestamptz) AND (starts_at < ('…'::timestamptz + '7 days'::interval)))
+              Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=21
+Planning Time: 0.193 ms
+Execution Time: 0.442 ms
+```
+
+### 2. A worker's visits in a date range (*My visits*, v1.1.0)
+
+`visit_workers_worker_id_starts_at_idx (worker_id, starts_at)` covers any visit the worker is assigned to, alone or as one of two workers. 36 assignments in 0.11 ms (3 buffers).
+
+```sql
+select … from visit_workers where worker_id = $1 and starts_at >= now() - interval '1 day' and starts_at < now() + interval '8 days' order by starts_at;
+```
+```text
+Sort (actual time=0.059..0.064 rows=36 loops=1)
+  Sort Key: starts_at
+  Sort Method: quicksort  Memory: 26kB
+  Buffers: shared hit=3
+  ->  Bitmap Heap Scan on visit_workers (actual time=0.039..0.046 rows=36 loops=1)
+        Recheck Cond: ((worker_id = '…'::uuid) AND (starts_at >= (now() - '1 day'::interval)) AND (starts_at < (now() + '8 days'::interval)))
+        Heap Blocks: exact=1
+        Buffers: shared hit=3
+        ->  Bitmap Index Scan on visit_workers_worker_id_starts_at_idx (actual time=0.025..0.025 rows=36 loops=1)
+              Index Cond: ((worker_id = '…'::uuid) AND (starts_at >= (now() - '1 day'::interval)) AND (starts_at < (now() + '8 days'::interval)))
+              Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=9
+Planning Time: 0.271 ms
+Execution Time: 0.107 ms
+```
+
+### 3. The membership check inside every RLS policy
+
+Every request runs `private.has_role` / `private.is_member`, often once per row, so it has to be cheap. `organization_members_user_id_idx (user_id)` finds the caller's memberships directly. Each user has very few, so the remaining filters cost nothing. 0.09 ms against 2,208 members (3 buffers).
+
+```sql
+select exists (select 1 from organization_members where organization_id = $1 and user_id = auth.uid() and role = any ($2));
+```
+```text
+Result (actual time=0.061..0.062 rows=1 loops=1)
+  Buffers: shared hit=3
+  InitPlan 1
+    ->  Index Scan using organization_members_user_id_idx on organization_members m (actual time=0.060..0.061 rows=1 loops=1)
+          Index Cond: (user_id = '…'::uuid)
+          Filter: ((role = ANY ('{owner,coordinator}'::member_role[])) AND (organization_id = '…'::uuid))
+          Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=3
+Planning Time: 0.117 ms
+Execution Time: 0.085 ms
+```
+
+On a table of a few hundred rows, Postgres correctly prefers a sequential scan: the whole table is 3 pages. The index pays off as the number of tenants grows. The script's first version, with 208 members, showed exactly that.
