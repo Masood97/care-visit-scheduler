@@ -154,6 +154,8 @@ node scripts/create-demo-accounts.mjs
 
 The two projects are in different regions. That doesn't affect correctness, but staging latency won't predict production latency.
 
+**Vercel functions run in `sin1` (Singapore)**, next to the production database (`vercel.json` → `regions`). Each page makes 3–4 database calls, so before v1.2.1 the default region `iad1` (Washington) added a ~200 ms trans-Pacific round trip to each of them.
+
 ## Documentation
 
 - [`docs/schema.md`](docs/schema.md): ER diagram, tables, constraints, the role-by-table access matrix, functions and error codes
