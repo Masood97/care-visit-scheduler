@@ -54,6 +54,15 @@ flowchart LR
 
 Each environment allows one deploy at a time (`concurrency`), and a queued deploy waits rather than cancelling a running one. Seed data is never pushed to a hosted project.
 
+## Checklist for a new table
+
+- `alter table … enable row level security;` and a policy for each role that needs access. The `00_rls_enabled` test fails otherwise.
+- **Explicit grants.** For example, `grant select, insert, update, delete on table public.x to authenticated;` with only the verbs your policies allow, plus what `service_role` needs. Our hosted projects **don't** auto-grant new tables to the API roles, and `supabase/config.toml` sets `auto_expose_new_tables = false` so the local stack behaves the same way. A missing grant shows up as `permission denied` in the pgTAP tests, not in production.
+- `COMMENT ON TABLE` and on non-obvious columns.
+- Indexes for foreign keys and the queries the app runs.
+
+> **Lesson from v1.0.0.** The first production deploy ran fine, but every API call failed with `permission denied for table …`. The local stack had auto-granted the tables, so tests passed locally while production had no grants. It was fixed forward with a new migration (`explicit_api_grants`) shipped in v1.0.1. No merged migration was edited.
+
 ## Naming rules
 
 - File: `<YYYYMMDDHHMMSS>_<snake_case_description>.sql`, created with `npx supabase migration new`. Never hand-pick a timestamp.
