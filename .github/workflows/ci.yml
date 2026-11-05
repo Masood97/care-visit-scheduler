@@ -4,15 +4,19 @@ on:
   pull_request:
     branches: [develop, main]
     types: [opened, edited, synchronize, reopened]
+  # Also check every commit that lands on main (release merge commits), so the final
+  # commit of main has its own green run.
+  push:
+    branches: [main]
 
 permissions:
   contents: read
   pull-requests: read
 
-# One run per PR; a new push cancels the run it replaces.
+# One run per PR (a new push cancels the run it replaces) or per main commit.
 concurrency:
-  group: ci-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   SUPABASE_CLI_VERSION: 2.122.1
@@ -29,8 +33,11 @@ jobs:
           fetch-depth: 0 # full history so the migration checks can diff against the target branch
 
       # Checks 5 and 6: merged migrations unchanged, new timestamps newer than the target branch.
-      - name: Check migration history against ${{ github.base_ref }}
-        run: bash scripts/check-migrations.sh "origin/${{ github.base_ref }}"
+      # On a PR the base is the target branch; on a push to main it is the previous main commit.
+      - name: Check migration history
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: bash scripts/check-migrations.sh "$BASE"
 
       - uses: supabase/setup-cli@v1
         with:
@@ -92,7 +99,7 @@ jobs:
     name: PR title
     runs-on: ubuntu-latest
     # Release PRs into main are titled "Release vX.Y.Z" by design, so only feature PRs are checked.
-    if: github.base_ref == 'develop'
+    if: github.event_name == 'pull_request' && github.base_ref == 'develop'
     steps:
       - uses: amannn/action-semantic-pull-request@v5
         env:

@@ -49,6 +49,7 @@ flowchart LR
    | Web app | type-check, lint or build fails |
    | PR title / Secret scan | title isn't a Conventional Commit; gitleaks finds a secret |
 
+   CI also runs on every push to `main` (release merge commits), comparing the migration history with the previous `main` commit.
 6. **Squash merge.** `deploy.yml` links the **staging** project, prints the pending migrations (`supabase db push --dry-run`) and applies them (`supabase db push`).
 7. **Release.** A PR from `develop` into `main` titled `Release vX.Y.Z` runs the same CI. After the merge commit, the production job waits for a reviewer to approve it (Actions → the run → *Review deployments*). It then pushes the migrations to **production** and, only if that succeeded, deploys the web app to Vercel.
 
